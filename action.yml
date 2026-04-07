@@ -15,21 +15,6 @@ inputs:
       Bella Baxter API base URL.
       When provided, exported as BELLA_BAXTER_URL for all subsequent steps in the job.
     required: false
-  oidc:
-    description: >
-      Set to "true" to exchange the platform OIDC token for a short-lived Bella API key
-      after install. Exports BELLA_API_KEY to the job environment.
-      The server automatically finds the matching TrustDomain by OIDC issuer —
-      no project/environment context needed.
-      Requires the job to have `id-token: write` permission.
-    required: false
-    default: 'false'
-  oidc-audience:
-    description: >
-      OIDC audience claim passed to `bella auth oidc`. Defaults to "bella-baxter".
-      Change only if your TrustDomain is configured with a custom audience.
-    required: false
-    default: 'bella-baxter'
 
 outputs:
   bella-version:
@@ -45,6 +30,7 @@ runs:
       shell: bash
       env:
         BELLA_INSTALL_VERSION: ${{ inputs.version }}
+        # Install to a writable temp directory — no sudo required on managed runners.
         BELLA_INSTALL_DIR: ${{ runner.temp }}/bella-bin
       run: |
         mkdir -p "$BELLA_INSTALL_DIR"
@@ -54,7 +40,10 @@ runs:
           VERSION_FLAG="--version $BELLA_INSTALL_VERSION"
         fi
 
-        curl -sSfL           https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.sh           | bash -s -- $VERSION_FLAG
+        # BELLA_INSTALL_DIR is read by the install script.
+        curl -sSfL \
+          https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.sh \
+          | bash -s -- $VERSION_FLAG
 
         echo "$BELLA_INSTALL_DIR" >> "$GITHUB_PATH"
 
@@ -64,16 +53,20 @@ runs:
       shell: pwsh
       env:
         BELLA_INSTALL_VERSION: ${{ inputs.version }}
+        # BELLA_INSTALL_DIR is read by the install script.
         BELLA_INSTALL_DIR: ${{ runner.temp }}\bella-bin
       run: |
         New-Item -ItemType Directory -Force -Path $env:BELLA_INSTALL_DIR | Out-Null
 
+        # BELLA_VERSION is read by the install script; leave empty to fetch latest.
         if ($env:BELLA_INSTALL_VERSION -and $env:BELLA_INSTALL_VERSION -ne 'latest') {
           $env:BELLA_VERSION = $env:BELLA_INSTALL_VERSION
         }
 
+        # BELLA_INSTALL_DIR is already set — the install script picks it up.
         irm https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.ps1 | iex
 
+        # Add to GITHUB_PATH so subsequent steps can find the binary.
         $env:BELLA_INSTALL_DIR | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     # ── Verify & capture version ───────────────────────────────────────────────
@@ -93,12 +86,3 @@ runs:
         BELLA_URL: ${{ inputs.bella-url }}
       run: |
         echo "BELLA_BAXTER_URL=$BELLA_URL" >> "$GITHUB_ENV"
-
-    # ── Optional: OIDC workload identity exchange ──────────────────────────────
-    - name: OIDC workload identity exchange
-      if: inputs.oidc == 'true'
-      shell: bash
-      env:
-        OIDC_AUDIENCE: ${{ inputs.oidc-audience }}
-      run: |
-        bella auth oidc --audience "$OIDC_AUDIENCE"
