@@ -15,6 +15,24 @@ inputs:
       Bella Baxter API base URL.
       When provided, exported as BELLA_BAXTER_URL for all subsequent steps in the job.
     required: false
+  oidc-project:
+    description: >
+      Project slug to use for OIDC workload identity exchange.
+      When provided together with oidc-env, runs `bella auth oidc` after install
+      and exports BELLA_API_KEY to the job environment.
+      Requires the job to have `id-token: write` permission.
+    required: false
+  oidc-env:
+    description: >
+      Environment slug to use for OIDC workload identity exchange.
+      Required when oidc-project is set.
+    required: false
+  oidc-audience:
+    description: >
+      OIDC audience claim. Defaults to "bella-baxter".
+      Change only if your TrustDomain is configured with a custom audience.
+    required: false
+    default: 'bella-baxter'
 
 outputs:
   bella-version:
@@ -41,9 +59,7 @@ runs:
         fi
 
         # BELLA_INSTALL_DIR is read by the install script.
-        curl -sSfL \
-          https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.sh \
-          | bash -s -- $VERSION_FLAG
+        curl -sSfL           https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.sh           | bash -s -- $VERSION_FLAG
 
         echo "$BELLA_INSTALL_DIR" >> "$GITHUB_PATH"
 
@@ -86,3 +102,14 @@ runs:
         BELLA_URL: ${{ inputs.bella-url }}
       run: |
         echo "BELLA_BAXTER_URL=$BELLA_URL" >> "$GITHUB_ENV"
+
+    # ── Optional: OIDC workload identity exchange ──────────────────────────────
+    - name: OIDC workload identity exchange
+      if: inputs.oidc-project != '' && inputs.oidc-env != ''
+      shell: bash
+      env:
+        OIDC_PROJECT: ${{ inputs.oidc-project }}
+        OIDC_ENV: ${{ inputs.oidc-env }}
+        OIDC_AUDIENCE: ${{ inputs.oidc-audience }}
+      run: |
+        bella auth oidc           --project "$OIDC_PROJECT"           --env "$OIDC_ENV"           --audience "$OIDC_AUDIENCE"
