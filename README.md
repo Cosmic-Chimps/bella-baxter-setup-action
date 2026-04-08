@@ -3,7 +3,7 @@
 Install the [Bella CLI](https://bella-baxter.io) on your GitHub Actions runner — Linux, macOS, or Windows. Self-contained binary with zero runtime dependencies (no Node.js, no .NET, no package manager).
 
 ```yaml
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
 ```
 
 ## Inputs
@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+      - uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
         with:
           bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -42,7 +42,7 @@ jobs:
 ### API Key
 
 ```yaml
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -60,7 +60,7 @@ permissions:
   id-token: write   # required
 
 steps:
-  - uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+  - uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
     with:
       bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -74,7 +74,7 @@ steps:
 `bella exec` wraps your command and injects all secrets. Nothing is written to disk.
 
 ```yaml
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -87,7 +87,7 @@ steps:
 Issue a short-lived SSH certificate via Bella's SSH CA:
 
 ```yaml
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -101,7 +101,7 @@ Issue a short-lived SSH certificate via Bella's SSH CA:
 `bella generate` is fully offline (pure crypto — no API call):
 
 ```yaml
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -116,7 +116,7 @@ Issue a short-lived SSH certificate via Bella's SSH CA:
 For GitHub Copilot coding agent or custom AI pipelines, `bella mcp` exposes secrets, TOTP, SSH signing, and token issuance as MCP tools:
 
 ```yaml
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
@@ -134,7 +134,7 @@ bella mcp --print-config
 
 ```yaml
 # Pin both the action version and the CLI binary version independently
-- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.41
+- uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.42
   with:
     version: '1.2.3'          # CLI binary version (from GitHub Releases)
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
