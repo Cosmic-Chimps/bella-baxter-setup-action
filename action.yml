@@ -3,6 +3,10 @@ description: >
   Install the Bella CLI on Linux, macOS, or Windows.
   Self-contained binary — no Node.js, no .NET runtime, no package manager required.
 
+branding:
+  icon: 'lock'
+  color: 'purple'
+
 inputs:
   version:
     description: >
@@ -15,6 +19,13 @@ inputs:
       Bella Baxter API base URL.
       When provided, exported as BELLA_BAXTER_URL for all subsequent steps in the job.
     required: false
+  oidc:
+    description: >
+      Set to "true" to exchange a GitHub OIDC token for a short-lived Bella API key.
+      Requires id-token: write permission in the workflow job.
+      Exports BELLA_API_KEY to $GITHUB_ENV when successful.
+    required: false
+    default: 'false'
 
 outputs:
   bella-version:
@@ -86,3 +97,12 @@ runs:
         BELLA_URL: ${{ inputs.bella-url }}
       run: |
         echo "BELLA_BAXTER_URL=$BELLA_URL" >> "$GITHUB_ENV"
+
+    # ── Optional: OIDC token exchange for short-lived Bella API key ────────────
+    - name: Authenticate via OIDC
+      if: inputs.oidc == 'true'
+      shell: bash
+      env:
+        BELLA_BAXTER_URL: ${{ env.BELLA_BAXTER_URL }}
+      run: |
+        bella auth oidc
