@@ -103,6 +103,6 @@ runs:
       if: inputs.oidc == 'true'
       shell: bash
       env:
-        BELLA_BAXTER_URL: ${{ env.BELLA_BAXTER_URL }}
+        BELLA_BAXTER_URL: ${{ env.BELLA_BAXTER_URL || 'https://api.bella-baxter.io' }}
       run: |
         bella auth oidc
