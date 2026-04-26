@@ -53,7 +53,7 @@ runs:
 
         # BELLA_INSTALL_DIR is read by the install script.
         curl -sSfL \
-          https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.sh \
+          https://raw.githubusercontent.com/Cosmic-Chimps/bella-baxter-cli/main/scripts/install-bella.sh \
           | bash -s -- $VERSION_FLAG
 
         echo "$BELLA_INSTALL_DIR" >> "$GITHUB_PATH"
@@ -75,7 +75,7 @@ runs:
         }
 
         # BELLA_INSTALL_DIR is already set — the install script picks it up.
-        irm https://raw.githubusercontent.com/cosmic-chimps/bella-baxter/main/scripts/install-bella.ps1 | iex
+        irm https://raw.githubusercontent.com/Cosmic-Chimps/bella-baxter-cli/main/scripts/install-bella.ps1 | iex
 
         # Add to GITHUB_PATH so subsequent steps can find the binary.
         $env:BELLA_INSTALL_DIR | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
