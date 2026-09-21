@@ -32,9 +32,11 @@ jobs:
         with:
           bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
-      - run: bella login --api-key ${{ secrets.BELLA_BAXTER_API_KEY }}
-
+      # The CLI reads BELLA_BAXTER_API_KEY from the environment. A key passed as a command
+      # argument is visible in the runner's process list and in its command log (#833).
       - run: bella exec -p my-api -e production -- ./deploy.sh
+        env:
+          BELLA_BAXTER_API_KEY: ${{ secrets.BELLA_BAXTER_API_KEY }}
 ```
 
 ## Authentication
@@ -46,7 +48,11 @@ jobs:
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
-- run: bella login --api-key ${{ secrets.BELLA_BAXTER_API_KEY }}
+# The CLI reads BELLA_BAXTER_API_KEY from the environment. A key passed as a command
+# argument is visible in the runner's process list and in its command log (#833).
+# Declare it as job or step env:
+#   env:
+#     BELLA_BAXTER_API_KEY: ${{ secrets.BELLA_BAXTER_API_KEY }}
 ```
 
 Store your API key as a GitHub Actions secret (`BELLA_BAXTER_API_KEY`). Get one from the Bella Baxter WebApp → **Settings → API Keys**.
@@ -78,8 +84,11 @@ steps:
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
-- run: bella login --api-key ${{ secrets.BELLA_BAXTER_API_KEY }}
+# The CLI reads BELLA_BAXTER_API_KEY from the environment. A key passed as a command
+# argument is visible in the runner's process list and in its command log (#833).
 - run: bella exec -p my-api -e production -- ./deploy.sh
+  env:
+    BELLA_BAXTER_API_KEY: ${{ secrets.BELLA_BAXTER_API_KEY }}
 ```
 
 ### SSH certificate signing
@@ -91,8 +100,11 @@ Issue a short-lived SSH certificate via Bella's SSH CA:
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
-- run: bella login --api-key ${{ secrets.BELLA_BAXTER_API_KEY }}
+# The CLI reads BELLA_BAXTER_API_KEY from the environment. A key passed as a command
+# argument is visible in the runner's process list and in its command log (#833).
 - run: bella ssh sign ~/.ssh/id_ed25519.pub --role deployer
+  env:
+    BELLA_BAXTER_API_KEY: ${{ secrets.BELLA_BAXTER_API_KEY }}
 - run: ssh -i ~/.ssh/id_ed25519-cert.pub deploy@prod ./deploy.sh
 ```
 
@@ -105,8 +117,11 @@ Issue a short-lived SSH certificate via Bella's SSH CA:
   with:
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 
-- run: bella login --api-key ${{ secrets.BELLA_BAXTER_API_KEY }}
-- run: |
+# The CLI reads BELLA_BAXTER_API_KEY from the environment. A key passed as a command
+# argument is visible in the runner's process list and in its command log (#833).
+- env:
+    BELLA_BAXTER_API_KEY: ${{ secrets.BELLA_BAXTER_API_KEY }}
+  run: |
     NEW_PASS=$(bella generate --length 32 --quiet)
     bella secrets set DB_PASSWORD "$NEW_PASS" -p my-api -e production
 ```
