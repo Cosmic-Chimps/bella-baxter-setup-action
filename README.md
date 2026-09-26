@@ -155,6 +155,26 @@ bella mcp --print-config
     bella-url: ${{ vars.BELLA_BAXTER_URL }}
 ```
 
+## What the action verifies
+
+The ref you pin (`@v…`, or better a full commit SHA) is the code that installs the CLI. The action
+does not run anything from a branch:
+
+1. It resolves the CLI version (`version`, or the release `latest` points to).
+2. It downloads that release's `checksums.txt`, `checksums.txt.asc`, `bella-signing-key.asc` and the
+   installer (`install-bella.sh` / `install-bella.ps1`) — all assets of that one release.
+3. It verifies the signature in a throwaway GnuPG home and accepts it only when it was made by the
+   Cosmic Chimps release key `65BB 8D3C EEE3 DD9E 4FFD  22B4 119F 114C A309 C2FA`, whose fingerprint
+   is pinned in the action itself.
+4. It checks the installer's SHA-256 against that signed file, then runs it with the resolved
+   version. The installer repeats both checks for the binary with its own embedded copy of the key.
+
+Every failure stops the job. `gpg` must be on the runner (it is on GitHub-hosted Ubuntu and macOS
+images, and ships with Git for Windows). Only CLI releases that publish their installer as an asset
+can be installed this way; earlier ones are refused. For an air-gapped mirror that cannot carry the
+signature, set `BELLA_INSECURE_SKIP_SIGNATURE: '1'` in the job's `env` — the installer is then
+checked against `checksums.txt` only, with a warning in the log.
+
 ## Supported Platforms
 
 | Runner | Architecture | Supported |
