@@ -21,11 +21,34 @@ inputs:
     required: false
   oidc:
     description: >
-      Set to "true" to exchange a GitHub OIDC token for a short-lived Bella API key.
-      Requires id-token: write permission in the workflow job.
-      Exports BELLA_API_KEY to $GITHUB_ENV when successful.
+      Set to "true" to exchange the job's GitHub OIDC token for a short-lived Bella API key.
+      Requires id-token: write permission in the workflow job, a Trust Domain on the environment
+      (console, environment, Identity tab), and the tenant, project and environment slugs
+      (inputs below, or BELLA_BAXTER_TENANT / BELLA_BAXTER_PROJECT / BELLA_BAXTER_ENV in the job's env).
+      On success the key is exported, masked, as BELLA_BAXTER_API_KEY (and the legacy alias BELLA_API_KEY)
+      for all later steps in the job; `bella run -- <command>` then uses that key's own project and environment.
     required: false
     default: 'false'
+  tenant:
+    description: >
+      Tenant (organisation) slug. Only used when oidc is "true"; required then, here or as BELLA_BAXTER_TENANT.
+      When both are set, the input wins.
+    required: false
+  project:
+    description: >
+      Project slug. Only used when oidc is "true"; required then, here or as BELLA_BAXTER_PROJECT.
+      When both are set, the input wins.
+    required: false
+  environment:
+    description: >
+      Environment slug. Only used when oidc is "true"; required then, here or as BELLA_BAXTER_ENV.
+      When both are set, the input wins.
+    required: false
+  audience:
+    description: >
+      OIDC audience to request. Only used when oidc is "true". Must be one the Trust Domain accepts.
+      Omit to use BELLA_OIDC_AUDIENCE if the job sets it, else the default "bella-baxter".
+    required: false
 
 outputs:
   bella-version:
@@ -104,10 +127,33 @@ runs:
         echo "BELLA_BAXTER_URL=$BELLA_URL" >> "$GITHUB_ENV"
 
     # ── Optional: OIDC token exchange for short-lived Bella API key ────────────
+    # `bella auth oidc` needs the tenant, project and environment slugs: without them the API answers
+    # 422 missing_context. Each input overrides only when non-empty, so a job-level env var of the same
+    # name keeps working. The URL uses `inputs.bella-url` first rather than relying on the previous
+    # step's GITHUB_ENV write being visible in the env context. An empty BELLA_OIDC_AUDIENCE is
+    # treated as unset by the CLI (WorkloadIdentityService.ResolveOidcAudience), so the default applies.
     - name: Authenticate via OIDC
       if: inputs.oidc == 'true'
       shell: bash
       env:
-        BELLA_BAXTER_URL: ${{ env.BELLA_BAXTER_URL || 'https://api.bella-baxter.io' }}
+        BELLA_BAXTER_URL: ${{ inputs.bella-url || env.BELLA_BAXTER_URL || 'https://api.bella-baxter.io' }}
+        BELLA_BAXTER_TENANT: ${{ inputs.tenant || env.BELLA_BAXTER_TENANT }}
+        BELLA_BAXTER_PROJECT: ${{ inputs.project || env.BELLA_BAXTER_PROJECT }}
+        BELLA_BAXTER_ENV: ${{ inputs.environment || env.BELLA_BAXTER_ENV }}
+        BELLA_OIDC_AUDIENCE: ${{ inputs.audience || env.BELLA_OIDC_AUDIENCE }}
       run: |
+        missing=""
+        [ -n "$BELLA_BAXTER_TENANT" ]  || missing="$missing tenant"
+        [ -n "$BELLA_BAXTER_PROJECT" ] || missing="$missing project"
+        [ -n "$BELLA_BAXTER_ENV" ]     || missing="$missing environment"
+        # A .bella file (org / project / environment) can still supply them: the CLI reads the nearest one.
+        dir="$PWD"
+        while [ -n "$missing" ] && [ "$dir" != "/" ] && [ -n "$dir" ]; do
+          [ -f "$dir/.bella" ] && missing=""
+          dir="$(dirname "$dir")"
+        done
+        if [ -n "$missing" ]; then
+          echo "::error title=Bella OIDC::oidc is 'true' but these are not set:$missing. Pass them as inputs of this action (tenant, project, environment) or set BELLA_BAXTER_TENANT, BELLA_BAXTER_PROJECT and BELLA_BAXTER_ENV in the job's env, or commit a .bella file."
+          exit 1
+        fi
         bella auth oidc

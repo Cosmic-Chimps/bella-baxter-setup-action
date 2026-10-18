@@ -11,7 +11,14 @@ Install the [Bella CLI](https://bella-baxter.io) on your GitHub Actions runner �
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `version` | No | `latest` | CLI version to install, e.g. `1.2.3`. Omit for the latest release. |
-| `bella-url` | No | — | Your Bella Baxter API base URL. When provided, exported as `BELLA_BAXTER_URL` for all subsequent steps in the job. |
+| `bella-url` | No | `https://api.bella-baxter.io` (OIDC step only) | Your Bella Baxter **API** base URL. Self-hosted: your API origin, not the console's. When provided, exported as `BELLA_BAXTER_URL` for all subsequent steps in the job. |
+| `oidc` | No | `false` | `true` exchanges the job's GitHub OIDC token for a short-lived Bella API key. Needs `permissions: id-token: write`, a Trust Domain on the environment, and `tenant`, `project` and `environment`. The key is exported, masked, as `BELLA_BAXTER_API_KEY` (and the legacy alias `BELLA_API_KEY`) for all later steps in the job. |
+| `tenant` | With `oidc` | — | Tenant (organisation) slug. Falls back to `BELLA_BAXTER_TENANT` in the job's `env`. |
+| `project` | With `oidc` | — | Project slug. Falls back to `BELLA_BAXTER_PROJECT`. |
+| `environment` | With `oidc` | — | Environment slug. Falls back to `BELLA_BAXTER_ENV`. |
+| `audience` | No | `bella-baxter` | OIDC audience to request. Must be one the Trust Domain accepts. Falls back to `BELLA_OIDC_AUDIENCE`, then the default. |
+
+The `tenant`, `project`, `environment` and `audience` inputs are read only when `oidc` is `true`. An input overrides the job-level variable of the same purpose only when it is non-empty. The step fails early, with an error naming what is missing, if a slug is still empty (a committed `.bella` file with org, project and environment also satisfies it).
 
 ## Outputs
 
@@ -59,19 +66,34 @@ Store your API key as a GitHub Actions secret (`BELLA_BAXTER_API_KEY`). Get one 
 
 ### Keyless — Trust Domain (Recommended for CI/CD)
 
-No stored credentials. Uses GitHub's OIDC token. Requires a [Trust Domain](https://bella-baxter.io/features/keyless) configured for your repository.
+No stored credentials. Uses GitHub's OIDC token. Requires a [Trust Domain](https://bella-baxter.io/features/keyless) on the environment (console, environment, **Identity** tab) whose claim rules match your repository.
 
 ```yaml
 permissions:
-  id-token: write   # required
+  id-token: write   # required to get GitHub's OIDC token
+  contents: read
 
 steps:
+  - uses: actions/checkout@v6
+
   - uses: cosmic-chimps/bella-baxter-setup-action@v0.1.1-preview.135
     with:
-      bella-url: ${{ vars.BELLA_BAXTER_URL }}
+      bella-url: ${{ vars.BELLA_BAXTER_URL }}   # optional; default https://api.bella-baxter.io
+      oidc: 'true'
+      tenant: my-org
+      project: my-api
+      environment: production
 
-  - run: bella run -p my-api -e production -- ./deploy.sh
+  # BELLA_BAXTER_API_KEY is now set (masked) and scoped to that environment,
+  # so no -p / -e is needed.
+  - run: bella run -- ./deploy.sh
 ```
+
+Notes:
+
+- `bella-url` is the **API** origin (`https://api.bella-baxter.io` for the hosted service), not the console's.
+- If the Trust Domain accepts a different audience, add `audience: <value>` (or set `BELLA_OIDC_AUDIENCE`). It must be one the Trust Domain accepts.
+- `bella run` does not mask the secret values it injects into the child process. Don't echo them in the step; if a script prints one, register it first with `echo "::add-mask::$VALUE"`. There is no rename option, so map a secret to another name in the step: `MY_VAR="$BELLA_NAME" ./deploy.sh`.
 
 ## Usage Patterns
 
@@ -158,22 +180,22 @@ bella mcp --print-config
 ## What the action verifies
 
 The ref you pin (`@v…`, or better a full commit SHA) is the code that installs the CLI. The action
-does not run anything from a branch:
+does not run anything from a branch. When it runs, it:
 
-1. It resolves the CLI version (`version`, or the release `latest` points to).
-2. It downloads that release's `checksums.txt`, `checksums.txt.asc`, `bella-signing-key.asc` and the
-   installer (`install-bella.sh` / `install-bella.ps1`) — all assets of that one release.
-3. It verifies the signature in a throwaway GnuPG home and accepts it only when it was made by the
-   Cosmic Chimps release key `65BB 8D3C EEE3 DD9E 4FFD  22B4 119F 114C A309 C2FA`, whose fingerprint
-   is pinned in the action itself.
-4. It checks the installer's SHA-256 against that signed file, then runs it with the resolved
-   version. The installer repeats both checks for the binary with its own embedded copy of the key.
+1. Resolves the CLI version: the `version` input, or the release that `latest` points to.
+2. Downloads that release's `checksums.txt`, `checksums.txt.asc`, `bella-signing-key.asc` and the
+   installer (`install-bella.sh` or `install-bella.ps1`). All of them are assets of that one release.
+3. Verifies the signature in a throwaway GnuPG home. It accepts the signature only when it was made by
+   the Cosmic Chimps release key with fingerprint `65BB 8D3C EEE3 DD9E 4FFD 22B4 119F 114C A309 C2FA`,
+   which is pinned in the action itself.
+4. Checks the installer's SHA-256 against that signed file, then runs the installer with the resolved
+   version. The installer repeats both checks for the binary, using its own embedded copy of the key.
 
-Every failure stops the job. `gpg` must be on the runner (it is on GitHub-hosted Ubuntu and macOS
-images, and ships with Git for Windows). Only CLI releases that publish their installer as an asset
-can be installed this way; earlier ones are refused. For an air-gapped mirror that cannot carry the
-signature, set `BELLA_INSECURE_SKIP_SIGNATURE: '1'` in the job's `env` — the installer is then
-checked against `checksums.txt` only, with a warning in the log.
+Every failure stops the job. `gpg` must be on the runner; it is on GitHub-hosted Ubuntu and macOS
+images, and ships with Git for Windows. Only CLI releases that publish their installer as an asset
+can be installed this way, and earlier releases are refused. For an air-gapped mirror that cannot
+carry the signature, set `BELLA_INSECURE_SKIP_SIGNATURE: '1'` in the job's `env`. The installer is then
+checked against `checksums.txt` only, and the log shows a warning.
 
 ## Supported Platforms
 
