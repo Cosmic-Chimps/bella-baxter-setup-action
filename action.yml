@@ -27,6 +27,8 @@ inputs:
       (inputs below, or BELLA_BAXTER_TENANT / BELLA_BAXTER_PROJECT / BELLA_BAXTER_ENV in the job's env).
       On success the key is exported, masked, as BELLA_BAXTER_API_KEY (and the legacy alias BELLA_API_KEY)
       for all later steps in the job; `bella run -- <command>` then uses that key's own project and environment.
+      The sign-in also binds a throwaway device key to the issued key and exports its private half, masked, as
+      BELLA_BAXTER_PRIVATE_KEY, so a tenant that requires registered devices accepts the key. No extra input is needed.
     required: false
     default: 'false'
   tenant:

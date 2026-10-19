@@ -12,7 +12,7 @@ Install the [Bella CLI](https://bella-baxter.io) on your GitHub Actions runner �
 |-------|----------|---------|-------------|
 | `version` | No | `latest` | CLI version to install, e.g. `1.2.3`. Omit for the latest release. |
 | `bella-url` | No | `https://api.bella-baxter.io` (OIDC step only) | Your Bella Baxter **API** base URL. Self-hosted: your API origin, not the console's. When provided, exported as `BELLA_BAXTER_URL` for all subsequent steps in the job. |
-| `oidc` | No | `false` | `true` exchanges the job's GitHub OIDC token for a short-lived Bella API key. Needs `permissions: id-token: write`, a Trust Domain on the environment, and `tenant`, `project` and `environment`. The key is exported, masked, as `BELLA_BAXTER_API_KEY` (and the legacy alias `BELLA_API_KEY`) for all later steps in the job. |
+| `oidc` | No | `false` | `true` exchanges the job's GitHub OIDC token for a short-lived Bella API key. Needs `permissions: id-token: write`, a Trust Domain on the environment, and `tenant`, `project` and `environment`. The key is exported, masked, as `BELLA_BAXTER_API_KEY` (and the legacy alias `BELLA_API_KEY`) for all later steps in the job. Its device key is exported too, masked, as `BELLA_BAXTER_PRIVATE_KEY`; no new input is needed. |
 | `tenant` | With `oidc` | — | Tenant (organisation) slug. Falls back to `BELLA_BAXTER_TENANT` in the job's `env`. |
 | `project` | With `oidc` | — | Project slug. Falls back to `BELLA_BAXTER_PROJECT`. |
 | `environment` | With `oidc` | — | Environment slug. Falls back to `BELLA_BAXTER_ENV`. |
@@ -92,6 +92,10 @@ steps:
 Notes:
 
 - `bella-url` is the **API** origin (`https://api.bella-baxter.io` for the hosted service), not the console's.
+- **Tenants that require registered devices (ZKE).** Each sign-in makes a new device key and sends its public half. The server records it on the issued key, and the device check admits the key only when the caller presents that same public half. The action exports the private half, masked, as `BELLA_BAXTER_PRIVATE_KEY` next to the API key, so later steps need no key options: `bella run -- ./deploy.sh` finds it. A tenant that does not require devices accepts the key either way.
+  - The private half is bound to one API key, which expires with the Trust Domain's token lifetime (15 minutes by default, 1 to 1440). Exposing it is no worse than exposing that key, and it is useless afterwards.
+  - It is masked before it is written to `$GITHUB_ENV`, every line of the PEM included. Do not print it.
+  - It needs a current CLI. An older one sends no device key, and a tenant that requires devices refuses the sign-in with `device_key_required`.
 - If the Trust Domain accepts a different audience, add `audience: <value>` (or set `BELLA_OIDC_AUDIENCE`). It must be one the Trust Domain accepts.
 - `bella run` does not mask the secret values it injects into the child process. Don't echo them in the step; if a script prints one, register it first with `echo "::add-mask::$VALUE"`. There is no rename option, so map a secret to another name in the step: `MY_VAR="$BELLA_NAME" ./deploy.sh`.
 
