@@ -92,7 +92,7 @@ steps:
 Notes:
 
 - `bella-url` is the **API** origin (`https://api.bella-baxter.io` for the hosted service), not the console's.
-- **Tenants that require registered devices (ZKE).** Each sign-in makes a new device key and sends its public half. The server records it on the issued key, and the device check admits the key only when the caller presents that same public half. The action exports the private half, masked, as `BELLA_BAXTER_PRIVATE_KEY` next to the API key, so later steps need no key options: `bella run -- ./deploy.sh` finds it. A tenant that does not require devices accepts the key either way.
+- **Organisations that require registered devices.** Each sign-in makes a new device key and sends its public half. The server records it on the issued key, and the device check admits the key only when the caller presents that same public half. The action exports the private half, masked, as `BELLA_BAXTER_PRIVATE_KEY` next to the API key, so later steps need no key options: `bella run -- ./deploy.sh` finds it. An organisation that does not require devices accepts the key either way.
   - The private half is bound to one API key, which expires with the Trust Domain's token lifetime (15 minutes by default, 1 to 1440). Exposing it is no worse than exposing that key, and it is useless afterwards.
   - It is masked before it is written to `$GITHUB_ENV`, every line of the PEM included. Do not print it.
   - It needs a current CLI. An older one sends no device key, and a tenant that requires devices refuses the sign-in with `device_key_required`.
