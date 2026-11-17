@@ -211,4 +211,4 @@ checked against `checksums.txt` only, and the log shows a warning.
 
 ## License
 
-[Apache 2.0](https://github.com/Cosmic-Chimps/bella-baxter/blob/main/LICENSE)
+MIT — see [LICENSE](LICENSE) for details.
