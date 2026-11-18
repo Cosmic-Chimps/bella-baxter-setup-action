@@ -16,7 +16,7 @@ jobs:
       - name: Read version
         id: version
         run: |
-          VERSION="v$(cat VERSION | tr -d '[:space:]')"
+          VERSION="v$(tr -d '[:space:]' < VERSION)"
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
@@ -40,3 +40,23 @@ jobs:
             --title "${{ steps.version.outputs.tag }}" \
             --notes "See [bella-baxter](https://github.com/Cosmic-Chimps/bella-baxter) for full changelog." \
             --latest
+
+      # Runs after a fresh release AND when the release already existed, so a re-run
+      # repairs a missing or stale major tag. Moves ONLY the major tag (v0, v1, ...),
+      # never a branch or a version tag. A moving major tag is the standard
+      # convention for GitHub Actions: `@v0` always follows the latest release.
+      # Two moving tags point at every release: the major (`v0`), which the docs use because a breaking `v1` will never
+      # reach it, and `latest`, for those who want every release including a breaking one. Version tags never move.
+      - name: Move the major and latest tags to the released commit
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          VERSION="${TAG#v}"
+          MAJOR="v${VERSION%%.*}"
+          git fetch --depth=1 origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          SHA="$(git rev-parse "${TAG}^{commit}")"
+          for moving in "${MAJOR}" latest; do
+            echo "Moving ${moving} to ${SHA} (${TAG})"
+            git tag -f "${moving}" "${SHA}"
+            git push -f origin "refs/tags/${moving}"
+          done
